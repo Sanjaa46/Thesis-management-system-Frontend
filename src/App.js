@@ -31,7 +31,7 @@ function AppContent() {
       <Routes>
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-        <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route path="/auth" element={<OAuthCallback />} />
         <Route path="/auth-success" element={<AuthSuccess />} />
         <Route path="/*" element={user ? <Main setUser={setUser} logoutFunction={logoutOAuth} /> : <Navigate to="/login" />} />
       </Routes>

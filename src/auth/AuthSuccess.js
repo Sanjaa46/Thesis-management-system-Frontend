@@ -9,11 +9,17 @@ const AuthSuccess = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const userData = await checkOAuthStatus();
-      if (userData) {
-        setUser(userData);
-        navigate('/');
-      } else {
+      try {
+        const userData = await checkOAuthStatus();
+        if (userData) {
+          setUser(userData);
+          navigate('/');
+        } else {
+          // If not authenticated, redirect to login
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
         navigate('/login');
       }
     };
