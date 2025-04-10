@@ -53,11 +53,16 @@ function Main({ setUser, logoutFunction }) {
     ),
   };
 
-  let userRole = "";
-  if (user?.email?.includes("department")) userRole = "department";
-  else if (user?.email?.includes("supervisor")) userRole = "supervisor";
-  else if (user?.email?.includes("student")) userRole = "student";
-  else if (user?.email?.includes("teacher")) userRole = "teacher";
+let userRole = "";
+if (user?.gid === "78") {
+  userRole = "department";
+} else if (user?.gid === "90") {
+  userRole = "supervisor";
+} else if (user?.gid === "60") {
+  userRole = "student";
+} else if (user?.gid === "70") {
+  userRole = "teacher";
+}
 
   const routeItems = roleRoutes[userRole] || null;
 

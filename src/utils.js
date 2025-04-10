@@ -22,6 +22,7 @@ export const fetchData = async (endpoint, params = {}) => {
     // API-с өгөгдөл татах GET хүсэлт илгээнэ.
     console.log("params", params);
     const response = await axios.get(`${API_URL}/${endpoint}`, {
+      withCredentials: true, // Күүки болон бусад authentication мэдээллийг илгээхийн тулд "withCredentials"-г идэвхжүүлнэ.
       params: params, // Хүсэлтийн параметрүүдийг дамжуулна.
     });
     console.log('response: ', response)

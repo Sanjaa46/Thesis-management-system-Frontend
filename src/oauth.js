@@ -1,39 +1,43 @@
 // src/oauth.js
 import axios from 'axios';
+import api from './api/axios';
 
-const API_URL = "http://127.0.0.1:8000"; // Your backend URL
+// Base URL for your backend
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-// Function to redirect user to OAuth authorization page
+// Function to redirect to OAuth login
 export const redirectToOAuthLogin = () => {
-  // Redirect to your backend's OAuth redirect endpoint
-  window.location.href = `${API_URL}/oauth/redirect`;
+  window.location.href = `${API_BASE_URL}/oauth/redirect`;
 };
 
-// Function to check if user is authenticated via OAuth
+// Function to check OAuth status
 export const checkOAuthStatus = async () => {
   try {
-    // Use a dedicated endpoint that doesn't redirect but just returns user data
-    console.log(localStorage.getItem('token'));
-    const response = await axios.get(`${API_URL}/api/user`, {
-
-      withCredentials: true
-    });
-    return response.data;
+    // Check if we have a token in localStorage
+    const token = localStorage.getItem('oauth_token');
+    
+    if (!token) {
+      return null;
+    }
+    
+    // Make a request to the user endpoint
+    const response = await api.get('/api/user');
+    
+    if (response.status === 200 && response.data) {
+      return response.data;
+    }
+    
+    return null;
   } catch (error) {
-    console.error("OAuth status check failed:", error);
+    console.error('OAuth status check failed:', error);
+    // Clear token if it's invalid
+    localStorage.removeItem('oauth_token');
     return null;
   }
 };
 
-// Function to logout user from OAuth
+// Function to logout
 export const logoutOAuth = async () => {
-  try {
-    await axios.get(`${API_URL}/oauth/logout`, {
-      withCredentials: true
-    });
-    return true;
-  } catch (error) {
-    console.error("OAuth logout failed:", error);
-    return false;
-  }
+  localStorage.removeItem('oauth_token');
+  return true;
 };

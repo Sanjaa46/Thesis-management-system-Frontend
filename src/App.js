@@ -1,3 +1,4 @@
+// src/App.js
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./auth/Login";
@@ -7,6 +8,7 @@ import OAuthCallback from "./auth/OAuthCallback";
 import { checkOAuthStatus, logoutOAuth } from "./oauth";
 import { UserProvider, useUser } from "./context/UserContext";
 import AuthSuccess from "./auth/AuthSuccess";
+import AuthTest from "./auth/AuthTest";
 
 function AppContent() {
   const { user, setUser } = useUser();
@@ -34,6 +36,8 @@ function AppContent() {
         <Route path="/auth" element={<OAuthCallback />} />
         <Route path="/auth-success" element={<AuthSuccess />} />
         <Route path="/*" element={user ? <Main setUser={setUser} logoutFunction={logoutOAuth} /> : <Navigate to="/login" />} />
+
+        <Route path="/auth-test" element={<AuthTest />} />
       </Routes>
     </Router>
   );

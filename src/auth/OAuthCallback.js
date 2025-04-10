@@ -1,39 +1,60 @@
-// src/auth/OAuthCallback.js
-import React, { useEffect } from 'react';
-import { useUser } from '../context/UserContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { useUser } from '../context/UserContext';
 
 const OAuthCallback = () => {
-  const { setUser } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { setUser } = useUser();
+  const [status, setStatus] = useState('Processing authentication...');
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const processCallback = async () => {
       try {
-        // Get user data using cookies that were set during OAuth callback
-        const response = await axios.get('http://127.0.0.1:8000/api/user', {
-          withCredentials: true
+        // Get the temporary token from URL
+        const params = new URLSearchParams(location.search);
+        const tempToken = params.get('token');
+        
+        if (!tempToken) {
+          setStatus('No authentication token found. Redirecting to login...');
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
+        // Exchange the temporary token for user data and access token
+        const response = await axios.post('http://127.0.0.1:8000/api/exchange-token', {
+          token: tempToken
         });
         
-        if (response.data) {
-          setUser(response.data);
-          navigate('/');
+        if (response.data && response.data.user && response.data.access_token) {
+          // Store the access token in localStorage
+          localStorage.setItem('oauth_token', response.data.access_token);
+          
+          // Update user context
+          setUser(response.data.user);
+          
+          setStatus('Authentication successful! Redirecting...');
+          setTimeout(() => navigate('/'), 1000);
         } else {
-          navigate('/login');
+          throw new Error('Invalid response from token exchange');
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        navigate('/login');
+        console.error('Error in OAuth callback:', error);
+        setStatus('Authentication failed. Redirecting to login...');
+        setTimeout(() => navigate('/login'), 2000);
       }
     };
 
-    fetchUserData();
-  }, [setUser, navigate]);
+    processCallback();
+  }, [navigate, location, setUser]);
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-violet-500"></div>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center p-8 bg-white shadow-lg rounded-lg">
+        <h2 className="text-xl font-bold mb-4">{status}</h2>
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+      </div>
     </div>
   );
 };
