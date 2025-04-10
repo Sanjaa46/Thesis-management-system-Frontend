@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from 'axios';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import "./Main.css";
@@ -20,15 +21,47 @@ import CustomNavBar from "../components/navbar/CustomNavBar";
 function Main({ setUser, logoutFunction }) {
   const { user } = useUser();
   const [menuCollapsed, setMenuCollapsed] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(false);
 
-  // Determine user role - using email for testing, but can use user?.gid in production
+  useEffect(() => {
+    // Check role when component mounts if user is logged in
+    if (user && !user.role) {
+      checkUserRole();
+    }
+  }, [user]);
+
+  const checkUserRole = async () => {
+    setRoleLoading(true);
+    try {
+      const response = await axios.get('/api/user/role', {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.data.success) {
+        const roleData = response.data.data;
+        // Update user with role information
+        setUser(prev => ({
+          ...prev,
+          role: roleData.roleName,
+          gid: roleData.gid
+        }));
+        console.log('Role detected:', roleData.roleName);
+      }
+    } catch (error) {
+      console.error('Error checking role:', error);
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  // Determine user role
   let userRole = "";
   
   if (user?.email === "department@gmail.com" || user?.gid === "78") {
     userRole = "department";
   } else if (user?.email === "supervisor@gmail.com" || user?.gid === "90") {
     userRole = "supervisor";
-  } else if (user?.email === "student@gmail.com" || user?.gid === "60") {
+  } else if (user?.email === "student@gmail.com" || user?.gid === "5") {
     userRole = "student";
   } else if (user?.email === "teacher@gmail.com" || user?.gid === "70") {
     userRole = "teacher";
