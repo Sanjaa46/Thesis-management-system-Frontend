@@ -33,8 +33,21 @@ function Main({ setUser, logoutFunction }) {
   const checkUserRole = async () => {
     setRoleLoading(true);
     try {
-      const response = await axios.get('/api/user/role', {
-        headers: { 'Accept': 'application/json' }
+      // Get the token from localStorage
+      const token = localStorage.getItem('oauth_token');
+      
+      if (!token) {
+        console.error('No authentication token found');
+        setRoleLoading(false);
+        return;
+      }
+      
+      const response = await axios.get('http://127.0.0.1:8000/api/user/role', {
+        headers: { 
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true
       });
       
       if (response.data.success) {
@@ -49,6 +62,12 @@ function Main({ setUser, logoutFunction }) {
       }
     } catch (error) {
       console.error('Error checking role:', error);
+      
+      // If we get 401, try to redirect to login
+      if (error.response && error.response.status === 401) {
+        console.log('Authentication failed, user may need to log in again');
+        // You could redirect to login here if needed
+      }
     } finally {
       setRoleLoading(false);
     }

@@ -15,7 +15,9 @@ export const fetchData = async (endpoint, params = {}) => {
         'Authorization': token ? `Bearer ${token}` : '',
         'Accept': 'application/json',
         'Content-Type': 'application/json'
-      }
+      },
+      // Important for cookie-based authentication
+      withCredentials: true
     });
     
     return response.data; // Хариу өгөгдлийг буцаана.
