@@ -73,7 +73,7 @@ export const fetchData = async (endpoint, params = {}) => {
     
     // Алдаа гарвал console дээр харуулна.
     console.error("Өгөгдөл татах үед алдаа гарлаа:", error);
-    throw error; // Алдааг шидэж, дээд түвшинд мэдээлнэ.
+   // throw error; // Алдааг шидэж, дээд түвшинд мэдээлнэ.
   }
 };
 
@@ -150,6 +150,6 @@ export const postData = async (endpoint, data, method = "post") => {
     
     // Алдаа гарвал console дээр харуулна.
     console.error("Өгөгдөл илгээх үед алдаа гарлаа:", error);
-    throw error; // Алдааг шидэж, дээд түвшинд мэдээлнэ.
+ //   throw error; // Алдааг шидэж, дээд түвшинд мэдээлнэ.
   }
 };

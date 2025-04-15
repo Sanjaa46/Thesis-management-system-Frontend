@@ -17,7 +17,7 @@ const RequestedTopicList = () => {
       const rawData = response.data;
 
       if (!rawData || !Array.isArray(rawData)) {
-        throw new Error("Invalid data format received from API");
+  //      throw new Error("Invalid data format received from API");
       }
 
       const transformedData = rawData.map((item) => {

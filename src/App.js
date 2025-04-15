@@ -15,9 +15,12 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+
     const checkAuth = async () => {
+      setLoading(true);
       try {
         const userData = await checkOAuthStatus();
+        console.log("User data: ", userData);
         setUser(userData);
       } catch (error) {
         console.error("Authentication check failed:", error);

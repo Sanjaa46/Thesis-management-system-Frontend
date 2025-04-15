@@ -58,7 +58,7 @@ function Main({ setUser, logoutFunction }) {
           role: roleData.roleName,
           gid: roleData.gid
         }));
-        console.log('Role detected:', roleData.roleName);
+        // console.log('Role detected:', roleData.roleName);
       }
     } catch (error) {
       console.error('Error checking role:', error);

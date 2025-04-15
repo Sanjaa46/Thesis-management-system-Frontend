@@ -41,7 +41,7 @@ api.interceptors.response.use(
         
         if (!refreshToken) {
           // No refresh token available, cannot refresh
-          throw new Error('No refresh token available');
+     //     throw new Error('No refresh token available');
         }
         
         // Try to refresh the token
