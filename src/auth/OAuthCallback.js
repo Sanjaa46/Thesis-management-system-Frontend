@@ -1,7 +1,7 @@
-// OAuthCallback.js (modified)
+// src/auth/OAuthCallback.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { exchangeCodeForToken, fetchUserData } from '../oauth';
 import { useUser } from '../context/UserContext';
 
 const OAuthCallback = () => {
@@ -14,13 +14,12 @@ const OAuthCallback = () => {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        // Get the authorization code from URL
+        // Get the authorization code and state from URL
         const params = new URLSearchParams(location.search);
         const code = params.get('code');
         const state = params.get('state');
         
-        console.log('OAuthCallback - URL search params:', location.search);
-        console.log('OAuthCallback - Code from URL:', code);
+        console.log('Authorization callback received with code:', code ? 'present' : 'missing');
         
         if (!code) {
           setError('No authorization code found in URL');
@@ -29,49 +28,28 @@ const OAuthCallback = () => {
           return;
         }
         
-        // Exchange code for tokens via your backend
-        try {
-          const response = await axios.post('http://127.0.0.1:8000/api/oauth/token', {
-            code: code,
-            state: state
-          });
-          
-          console.log('Token response:', response.data);
-          
-          if (response.data.access_token) {
-            // Store tokens in localStorage
-            localStorage.setItem('oauth_token', response.data.access_token);
-            
-            if (response.data.refresh_token) {
-              localStorage.setItem('refresh_token', response.data.refresh_token);
-            }
-            
-            localStorage.setItem('expires_in', response.data.expires_in.toString());
-            localStorage.setItem('token_time', response.data.token_time.toString());
-            
-            // Get user info
-            const userResponse = await axios.get('http://127.0.0.1:8000/api/user', {
-              headers: {
-                'Authorization': `Bearer ${response.data.access_token}`
-              }
-            });
-            
-            setUser(userResponse.data);
-            setStatus('Authentication successful! Redirecting...');
-            setTimeout(() => navigate('/'), 1000);
-          } else {
-            throw new Error('Invalid token response');
-          }
-        } catch (exchangeError) {
-          console.error('Token exchange error:', exchangeError);
-          setError(`Token exchange failed: ${exchangeError.message}`);
-          setStatus('Authentication failed. Redirecting to login...');
-          setTimeout(() => navigate('/login'), 3000);
+        // Exchange authorization code for tokens
+        setStatus('Exchanging code for tokens...');
+        const tokenData = await exchangeCodeForToken(code, state);
+        
+        if (!tokenData || !tokenData.access_token) {
+          throw new Error('Failed to obtain access token');
         }
+        
+        // Fetch user data with the new token
+        setStatus('Fetching user information...');
+        const userData = await fetchUserData();
+        
+        // Update global user state
+        setUser(userData);
+        
+        // Success, redirect to home
+        setStatus('Authentication successful! Redirecting...');
+        setTimeout(() => navigate('/'), 1000);
       } catch (error) {
         console.error('Error in OAuth callback:', error);
-        setError(`General error: ${error.message}`);
-        setStatus(`Authentication failed. Redirecting to login...`);
+        setError(`Authentication error: ${error.message}`);
+        setStatus('Authentication failed. Redirecting to login...');
         setTimeout(() => navigate('/login'), 3000);
       }
     };
@@ -79,7 +57,27 @@ const OAuthCallback = () => {
     processCallback();
   }, [navigate, location, setUser]);
 
-  // JSX remains the same
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+        <h2 className="text-2xl font-bold mb-4">Authentication</h2>
+        
+        <div className="mb-4">
+          <p className="text-gray-700">{status}</p>
+          
+          {error && (
+            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default OAuthCallback;

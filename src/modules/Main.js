@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import axios from 'axios';
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
+import { Spin, notification } from "antd";
+import { fetchUserRole, mapGidToRole } from "../services/RoleService";
 import "./Main.css";
 
 // Import components
@@ -21,70 +22,81 @@ import CustomNavBar from "../components/navbar/CustomNavBar";
 function Main({ setUser, logoutFunction }) {
   const { user } = useUser();
   const [menuCollapsed, setMenuCollapsed] = useState(false);
-  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
+  const [userRole, setUserRole] = useState("");
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Check role when component mounts if user is logged in
-    if (user && !user.role) {
-      checkUserRole();
-    }
-  }, [user]);
-
-  const checkUserRole = async () => {
-    setRoleLoading(true);
-    try {
-      // Get the token from localStorage
-      const token = localStorage.getItem('oauth_token');
-      
-      if (!token) {
-        console.error('No authentication token found');
-        setRoleLoading(false);
-        return;
-      }
-      
-      const response = await axios.get('http://127.0.0.1:8000/api/user/role', {
-        headers: { 
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        withCredentials: true
-      });
-      
-      if (response.data.success) {
-        const roleData = response.data.data;
+    // Detect user role on component mount
+    const detectUserRole = async () => {
+      setRoleLoading(true);
+      try {
+        // First try to detect role from user object if available
+        if (user?.role) {
+          setUserRole(user.role);
+          setRoleLoading(false);
+          return;
+        }
+        
+        if (user?.gid) {
+          const roleName = mapGidToRole(user.gid);
+          setUserRole(roleName);
+          
+          // Update user with role information
+          setUser(prev => ({
+            ...prev,
+            role: roleName
+          }));
+          
+          setRoleLoading(false);
+          return;
+        }
+        
+        // If no role in user object, fetch from API
+        const roleData = await fetchUserRole();
+        const roleName = roleData.roleName || mapGidToRole(roleData.gid);
+        
+        setUserRole(roleName);
+        
         // Update user with role information
         setUser(prev => ({
           ...prev,
-          role: roleData.roleName,
+          role: roleName,
           gid: roleData.gid
         }));
-        // console.log('Role detected:', roleData.roleName);
+        
+        console.log('Role detected:', roleName);
+      } catch (error) {
+        console.error('Error detecting role:', error);
+        setError('Failed to detect user role. Please try logging in again.');
+        notification.error({
+          message: 'Role Detection Failed',
+          description: 'Could not determine your user role. Some features may be unavailable.'
+        });
+        
+        // Fallback to email-based role detection if API fails
+        if (user?.email) {
+          let fallbackRole = "";
+          if (user.email.includes("department")) fallbackRole = "department";
+          else if (user.email.includes("supervisor")) fallbackRole = "supervisor";
+          else if (user.email.includes("student")) fallbackRole = "student";
+          else if (user.email.includes("teacher")) fallbackRole = "teacher";
+          
+          if (fallbackRole) {
+            setUserRole(fallbackRole);
+            setUser(prev => ({
+              ...prev,
+              role: fallbackRole
+            }));
+          }
+        }
+      } finally {
+        setRoleLoading(false);
       }
-    } catch (error) {
-      console.error('Error checking role:', error);
-      
-      // If we get 401, try to redirect to login
-      if (error.response && error.response.status === 401) {
-        console.log('Authentication failed, user may need to log in again');
-        // You could redirect to login here if needed
-      }
-    } finally {
-      setRoleLoading(false);
-    }
-  };
+    };
 
-  // Determine user role
-  let userRole = "";
-  
-  if (user?.email === "department@gmail.com" || user?.gid === "78") {
-    userRole = "department";
-  } else if (user?.email === "supervisor@gmail.com" || user?.gid === "90") {
-    userRole = "supervisor";
-  } else if (user?.email === "student@gmail.com" || user?.gid === "5") {
-    userRole = "student";
-  } else if (user?.email === "teacher@gmail.com" || user?.gid === "70") {
-    userRole = "teacher";
-  }
+    detectUserRole();
+  }, [user, setUser]);
 
   // Define routes based on user role
   const getRoutes = () => {
@@ -92,7 +104,7 @@ function Main({ setUser, logoutFunction }) {
       case "department":
         return (
           <>
-            <Route index element={<StudentList />} />
+            <Route index element={<Navigate to="/studentlist" replace />} />
             <Route path="/studentlist" element={<StudentList />} />
             <Route path="/deformset" element={<DeFormSet />} />
           </>
@@ -100,7 +112,7 @@ function Main({ setUser, logoutFunction }) {
       case "supervisor":
         return (
           <>
-            <Route index element={<ProposedTopics />} />
+            <Route index element={<Navigate to="/proposedtopics" replace />} />
             <Route path="/proposedtopics" element={<ProposedTopics />} />
             <Route path="/approvedtopics" element={<ApprovedTopics />} />
           </>
@@ -108,7 +120,7 @@ function Main({ setUser, logoutFunction }) {
       case "student":
         return (
           <>
-            <Route index element={<TopicListStud />} />
+            <Route index element={<Navigate to="/topicliststud" replace />} />
             <Route path="/topicliststud" element={<TopicListStud />} />
             <Route path="/proposetopicstud" element={<ProposeTopicStud />} />
             <Route path="/confirmedtopic" element={<ConfirmedTopicStud />} />
@@ -117,7 +129,7 @@ function Main({ setUser, logoutFunction }) {
       case "teacher":
         return (
           <>
-            <Route index element={<TopicList />} />
+            <Route index element={<Navigate to="/topiclist" replace />} />
             <Route path="/topiclist" element={<TopicList />} />
             <Route path="/proposetopics" element={<ProposeTopic />} />
             <Route path="/confirmedtopics" element={<ConfirmedTopics />} />
@@ -125,11 +137,18 @@ function Main({ setUser, logoutFunction }) {
         );
       default:
         return (
-          <Route index element={
+          <Route path="*" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center p-8">
-                <h2 className="text-2xl font-bold mb-4">Welcome</h2>
-                <p>Your role is not defined. Please contact an administrator.</p>
+                <h2 className="text-2xl font-bold mb-4">Access Error</h2>
+                <p>Your role could not be determined. Please contact an administrator.</p>
+                {error && <p className="text-red-500 mt-2">{error}</p>}
+                <button 
+                  onClick={logoutFunction}
+                  className="mt-4 px-4 py-2 bg-violet-500 text-white rounded"
+                >
+                  Logout and Try Again
+                </button>
               </div>
             </div>
           } />
@@ -140,6 +159,14 @@ function Main({ setUser, logoutFunction }) {
   const handleMenuToggle = () => {
     setMenuCollapsed(!menuCollapsed);
   };
+
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spin tip="Loading user information..." size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout">

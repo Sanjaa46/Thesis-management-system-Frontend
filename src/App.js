@@ -2,34 +2,46 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./auth/Login";
-import Register from "./auth/Register";
 import Main from "./modules/Main";
 import OAuthCallback from "./auth/OAuthCallback";
 import { checkOAuthStatus, logoutOAuth } from "./oauth";
 import { UserProvider, useUser } from "./context/UserContext";
-import AuthSuccess from "./auth/AuthSuccess";
-import AuthTest from "./auth/AuthTest";
 
 function AppContent() {
   const { user, setUser } = useUser();
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
-
     const checkAuth = async () => {
       setLoading(true);
       try {
         const userData = await checkOAuthStatus();
-        console.log("User data: ", userData);
-        setUser(userData);
+        if (userData) {
+          console.log("User authenticated:", userData);
+          setUser(userData);
+          setAuthError(null);
+        } else {
+          console.log("No authenticated user found");
+          setUser(null);
+        }
       } catch (error) {
         console.error("Authentication check failed:", error);
+        setAuthError(error.message);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
     checkAuth();
+    
+    // Set up a timer to periodically check authentication status
+    const authCheckInterval = setInterval(checkAuth, 10 * 60 * 1000); // Check every 10 minutes
+    
+    return () => {
+      clearInterval(authCheckInterval); // Clean up on unmount
+    };
   }, [setUser]);
 
   if (loading) {
@@ -46,12 +58,26 @@ function AppContent() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={!user ? <Login setAuthState={() => {}} /> : <Navigate to="/" />} />
-        <Route path="/register" element={!user ? <Register setAuthState={() => {}} setUser={setUser} /> : <Navigate to="/" />} />
+        {/* Public routes */}
+        <Route path="/login" element={
+          !user ? (
+            <Login />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        
+        {/* OAuth callback route */}
         <Route path="/auth" element={<OAuthCallback />} />
-        <Route path="/auth-success" element={<AuthSuccess />} />
-        <Route path="/auth-test" element={<AuthTest />} />
-        <Route path="/*" element={user ? <Main user={user} setUser={setUser} logoutFunction={logoutOAuth} /> : <Navigate to="/login" />} />
+        
+        {/* Protected routes */}
+        <Route path="/*" element={
+          user ? (
+            <Main setUser={setUser} logoutFunction={logoutOAuth} />
+          ) : (
+            <Navigate to={`/login${authError ? `?error=${encodeURIComponent(authError)}` : ''}`} replace />
+          )
+        } />
       </Routes>
     </Router>
   );
